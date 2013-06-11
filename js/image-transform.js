@@ -17,30 +17,68 @@
         return this;
     };
 
-    function init(options) {
+    function init(opts) {
         var self = this;
+        self.transform = new Transform(self, opts);
     }
 
-    function Transform(options) {
-        var self = this,
-            $self = $(self);
+    function Transform(target, opts) {
+        var src = $(target).attr('src');
 
-        this.options = $.extend({
-            cropstart: $.noop,
-            cropstop: $.noop,
-            rotatestart: $.noop,
-            rotatestop: $.noop,
-            init: $.noop,
-            destroy: $.noop
-        }, options);
+        if (typeof src === 'undefined' || src === false) {
+            src = '';
+        }
+
+        var initTarget,
+            paper,
+            self = this,
+            $self = $(self),
+            originalWidth = 0,
+            originalHeight = 0,
+            width = 0,
+            height = 0,
+            container = document.createElement('div'),
+            options = $.extend({
+                containerHeight: '100%',
+                containerWidth: '100%',
+                cropstart: $.noop,
+                cropstop: $.noop,
+                destroy: $.noop,
+                init: $.noop,
+                rotatestart: $.noop,
+                rotatestop: $.noop,
+                src: src,
+                viewBoxHeight: $(target).height(),
+                viewBoxWidth: $(target).width()
+            }, opts);
+
+        if (typeof src === 'undefined' || src === false) {
+            throw "No src given!";
+        }
+
+        self.target = target;
+
+        $(self.target).hide();
+        $(self.target).after(container);
 
         $self.on('cropstart', options.cropstart);
         $self.on('cropstop', options.cropstop);
+        $self.on('destroy', options.destroy);
+        $self.on('init', options.init);
         $self.on('rotatestart', options.rotatestart);
         $self.on('rotatestop', options.rotatestop);
-        $self.on('init', options.init);
-        $self.on('destroy', options.destroy);
 
+
+
+        initTarget = function() {
+            paper = Raphael(container, options.containerWidth, options.containerHeight);
+            paper.setViewBox(0, 0, options.viewBoxWidth, options.viewBoxHeight, true);
+        };
+
+
+        initTarget();
+
+        $self.trigger('init');
     }
 
     Transform.version = "0.0.1";

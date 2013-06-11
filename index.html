@@ -37,7 +37,11 @@
     <script>
         $(function(){
 
-
+            $('#theImage').imageTransform({
+                init: function(){
+                    console.log('init!');
+                }
+            });
 
 
         });
