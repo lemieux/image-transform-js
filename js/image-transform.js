@@ -31,13 +31,12 @@
             targetIsImage = $(target).is('img'),
             self = this,
             $self = $(self),
+            naturalWidth = 0,
+            naturalHeight = 0,
             originalWidth = 0,
             originalHeight = 0,
-            width = 0,
-            height = 0,
             centerX = 0,
             centerY = 0,
-            currentAngle = 0,
             container = document.createElement('div'),
             options = $.extend({
                 containerHeight: '100%',
@@ -69,14 +68,14 @@
             self.target = realTarget;
             self.img = realTarget[0];
 
-            originalWidth = self.img.naturalWidth;
-            originalHeight = self.img.naturalHeight;
+            naturalWidth = self.img.naturalWidth;
+            naturalHeight = self.img.naturalHeight;
 
-            width = self.img.width;
-            height = self.img.height;
+            originalWidth = self.img.width;
+            originalHeight = self.img.height;
 
-            centerX = width / 2;
-            centerY = height / 2;
+            centerX = originalWidth / 2;
+            centerY = originalHeight / 2;
 
             $(self.target).hide();
             $(self.target).after(container);
@@ -96,49 +95,51 @@
                     fill: options.boxBgColor
                 });
                 paper.setViewBox(0, 0, options.viewBoxWidth, options.viewBoxHeight, true);
-                image = paper.image(options.src, 0, 0, width, height);
+                image = paper.image(options.src, 0, 0, originalWidth, originalHeight);
             };
 
-            rotate = function(delta) {
-                currentAngle = currentAngle + delta;
+            rotate = function(angle) {
 
                 var radians, sint, cost, h1, h2, hh, ww;
-                if (currentAngle <= 90) {
-                    radians = currentAngle * degreesToRadian;
-                } else if (currentAngle <= 180) {
-                    radians = (180 - currentAngle) * degreesToRadian;
-                } else if (currentAngle <= 270) {
-                    radians = (currentAngle - 180) * degreesToRadian;
-                } else {
-                    radians = (360 - currentAngle) * degreesToRadian;
-                }
 
+                if (angle <= 90) {
+                    radians = angle * degreesToRadian;
+                } else if (angle <= 180) {
+                    radians = (180 - angle) * degreesToRadian;
+                } else if (angle <= 270) {
+                    radians = (angle - 180) * degreesToRadian;
+                } else {
+                    radians = (360 - angle) * degreesToRadian;
+                }
 
                 sint = Math.sin(radians);
                 cost = Math.cos(radians);
 
-                var height = image.attrs.height, width = image.attrs.width;
+                var height = originalHeight,
+                    width = originalWidth;
 
-                h1 = height * height / (width * sint + height * cost);
-                h2 = height * width / (width * cost + height * sint);
-                hh = Math.min(h1, h2);
-                ww = hh * width / height;
+                var verticalSpace = width * sint + height * cost;
+                var horizontalSpace = width * cost + height * sint;
 
-                var scale = hh / ww;
+
+                var scaleX = width / horizontalSpace;
+                var scaleY = height / verticalSpace;
+
+                var scale = Math.min(scaleX, scaleY);
 
                 if (options.rotationAnimation !== undefined && typeof options.rotationAnimation === "number") {
                     image.animate({
-                        transform: "r" + currentAngle + "s" + scale
+                        transform: "r" + angle + "s" + scale
                     }, options.rotationAnimation, "<>");
                 } else {
-                    image.transform("r" + currentAngle + "s" + scale);
+                    image.transform("r" + angle + "s" + scale);
                 }
             };
 
 
             initTarget();
 
-            self.rotate = rotate;
+            realTarget.rotate = self.rotate = rotate;
             $self.trigger('init');
         };
 
