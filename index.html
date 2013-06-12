@@ -23,6 +23,9 @@
         <div class="span6">
             <button class="btn" id="rotateLeft">Rotate left</button><button id="rotateRight" class="btn">Rotate right</button>
         </div>
+        <div class-"span6">
+            <input type="range" id="slider" min="0" max="360" value="0" step="5" />
+        </div>
     </div>
 
     </div> <!-- /container -->
@@ -35,15 +38,35 @@
     <script src="../js/image-transform.js"></script>
 
     <script>
-        $(function(){
+        $(function() {
 
             var obj = $('#theImage').imageTransform({
-                init: function(){
+                init: function() {
                     console.log('init!');
-                }
+                },
+                rotationAnimation : 0
             });
 
-            obj.transform.rotate(90);
+            var currentAngle = 0;
+
+            $('#rotateRight').on('click', function() {
+                currentAngle += 90;
+                currentAngle %= 360;
+                obj.rotate(currentAngle);
+            });
+
+            $('#rotateLeft').on('click', function() {
+                currentAngle -= 90;
+                currentAngle %= 360;
+                obj.rotate(currentAngle);
+            });
+
+            $('#slider').on('change', function() {
+                currentAngle = parseInt($(this).val());
+                currentAngle %= 360;
+                obj.rotate(currentAngle);
+            });
+
 
 
         });
