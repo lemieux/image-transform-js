@@ -37,11 +37,13 @@
     <script>
         $(function(){
 
-            $('#theImage').imageTransform({
+            var obj = $('#theImage').imageTransform({
                 init: function(){
                     console.log('init!');
                 }
             });
+
+            obj.transform.rotate(90);
 
 
         });
