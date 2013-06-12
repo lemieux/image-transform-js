@@ -102,6 +102,8 @@
 
                 var radians, sint, cost, h1, h2, hh, ww;
 
+                angle = angle < 0 ? 360 + angle : angle;
+
                 if (angle <= 90) {
                     radians = angle * degreesToRadian;
                 } else if (angle <= 180) {
