@@ -54,9 +54,7 @@
                 boxBgColor: '#4a525a'
             }, opts);
 
-
         var degreesToRadian = Math.PI / 180;
-
 
         initTransform = function() {
 
@@ -99,7 +97,7 @@
             };
 
             rotate = function(angle) {
-
+                $self.trigger('rotatestart');
                 var radians, sint, cost, h1, h2, hh, ww;
 
                 angle = angle < 0 ? 360 + angle : angle;
@@ -132,9 +130,14 @@
                 if (options.rotationAnimation !== undefined && typeof options.rotationAnimation === "number") {
                     image.animate({
                         transform: "r" + angle + "s" + scale
-                    }, options.rotationAnimation, "<>");
+                    },
+                        options.rotationAnimation,
+                        "<>", function() {
+                        $self.trigger('rotatestop');
+                    });
                 } else {
                     image.transform("r" + angle + "s" + scale);
+                    $self.trigger('rotatestop');
                 }
             };
 
