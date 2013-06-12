@@ -29,6 +29,11 @@
             drawHandle,
             drawShadow,
             rotate,
+            showCrop,
+            moveCrop,
+            resizeCrop,
+            cropTool,
+            isCropVisible,
             paper,
             image,
             realTarget,
@@ -42,9 +47,9 @@
             originalHeight = 0,
             centerX = 0,
             centerY = 0,
-            cropToolHidden = true,
-            container = document.createElement('div'),
+            cropToolVisible = false,
             options = $.extend({
+                container: document.createElement('div'),
                 containerHeight: '100%',
                 containerWidth: '100%',
                 cropstart: $.noop,
@@ -62,8 +67,9 @@
                 rotationAnimation: 500,
                 boxBgColor: '#4a525a',
                 defaultCrop: undefined,
-                cropRatio: 1,
-                keepRatio: true
+                cropRatio: 0.66,
+                keepRatio: true,
+                showCropOnLoad: false
             }, opts);
         /*
         var p = paper.setFinish(),
@@ -103,6 +109,8 @@
             self.target = realTarget;
             self.img = realTarget[0];
 
+            cropToolVisible = options.showCropOnLoad;
+
             naturalWidth = self.img.naturalWidth;
             naturalHeight = self.img.naturalHeight;
 
@@ -113,7 +121,7 @@
             centerY = originalHeight / 2;
 
             $(self.target).hide();
-            $(self.target).after(container);
+            $(self.target).after(options.container);
 
             $self.on('cropstart', options.cropstart);
             $self.on('cropstop', options.cropstop);
@@ -125,8 +133,8 @@
 
 
             initTarget = function() {
-                paper = Raphael(container, options.containerWidth, options.containerHeight);
-                paper.rect(0, 0, options.containerWidth, options.containerHeight).attr({
+                paper = Raphael(options.container, options.containerWidth, options.containerHeight);
+                paper.rect(0, 0, options.viewBoxWidth, options.viewBoxHeight).attr({
                     fill: options.boxBgColor
                 });
                 paper.setViewBox(0, 0, options.viewBoxWidth, options.viewBoxHeight, true);
@@ -169,17 +177,35 @@
                 var cropButtonSet = paper.set();
                 cropButtonSet.push(cropButton);
 
-                var cropIcon = drawCropTool(22.5, centerY + 12.5, 25, 25, 7, options.cropHandleColor, options.cropBoxColor, false);
+                var cropIcon = drawCropTool(22.5,
+                    centerY + 12.5,
+                    25,
+                    25,
+                    4,
+                    options.cropHandleColor,
+                    options.cropBoxColor,
+                    false,
+                    false,
+                    false);
+
                 cropButtonSet.push(cropIcon);
 
 
-                var cropTool = drawCropTool(self.cropCoords.x,
+                cropTool = drawCropTool(self.cropCoords.x,
                     self.cropCoords.y,
                     self.cropCoords.width,
                     self.cropCoords.height,
                     options.cropHandleSize,
                     options.cropHandleColor,
-                    options.cropBoxColor, true);
+                    options.cropBoxColor, true, true, true);
+
+                cropTool.drag(function(dx, dy, x, y, event) {
+                    moveCrop(dx, dy);
+                }, function() {
+                    Backbone.trigger('cropstart');
+                }, function(){
+                    Backbone.trigger('cropstop');
+                });
 
 
                 cropButtonSet.mouseover(function() {
@@ -187,27 +213,31 @@
                 }).mouseout(function() {
                     cropButtonSet.attr('fill-opacity', 0.5);
                 }).click(function() {
-                    if (cropToolHidden) {
-                        cropToolHidden = false;
-                        cropTool.show();
+                    if (cropToolVisible) {
+                        showCrop(false);
                     } else {
-                        cropToolHidden = true;
-                        cropTool.hide();
+                        showCrop(true);
                     }
                     cropButtonSet.toFront();
                 });
 
-                cropTool.hide();
-
-
+                showCrop(cropToolVisible);
+                cropButtonSet.toFront();
             };
 
-            drawHandle = function(x, y, width, height, color, name) {
-                return paper.rect(x, y, width, height).attr({
+            drawHandle = function(x, y, width, height, color, name, isResizeable) {
+                var handle = paper.rect(x, y, width, height).attr({
                     stroke: color,
                     fill: color,
                     'fill-opacity': 0.5
                 }).data('name', name);
+
+                if (isResizeable) {
+                    handle.attr({
+                        'cursor': name + '-resize'
+                    });
+                }
+                return handle;
             };
 
             drawShadow = function(x, y, width, height) {
@@ -216,30 +246,30 @@
                 var top = paper.rect(x, 0, width, y).attr({
                     'fill': '#000',
                     'fill-opacity': 0.5,
-                    'stroke-opacity' : 0.5,
+                    'stroke-opacity': 0.5,
                     'stroke-width': 0,
-                    'stroke' : '#000'
+                    'stroke': '#000'
                 });
                 var bottom = paper.rect(x, y + height, width, originalHeight - y - height).attr({
                     'fill': '#000',
                     'fill-opacity': 0.5,
-                    'stroke-opacity' : 0.5,
+                    'stroke-opacity': 0.5,
                     'stroke-width': 0,
-                    'stroke' : '#000'
+                    'stroke': '#000'
                 });
                 var left = paper.rect(0, 0, x, originalHeight).attr({
                     'fill': '#000',
                     'fill-opacity': 0.5,
-                    'stroke-opacity' : 0.5,
+                    'stroke-opacity': 0.5,
                     'stroke-width': 0,
-                    'stroke' : '#000'
+                    'stroke': '#000'
                 });
                 var right = paper.rect(x + width, 0, originalWidth - x - width, originalHeight).attr({
                     'fill': '#000',
                     'fill-opacity': 0.5,
-                    'stroke-opacity' : 0.5,
+                    'stroke-opacity': 0.5,
                     'stroke-width': 0,
-                    'stroke' : '#000'
+                    'stroke': '#000'
                 });
 
                 set.push(top);
@@ -250,7 +280,7 @@
                 return set;
             };
 
-            drawCropTool = function(x, y, width, height, handleSize, handleColor, boxColor, isDrawingShadow) {
+            drawCropTool = function(x, y, width, height, handleSize, handleColor, boxColor, isDrawingShadow, isResizeable, isMoveable) {
 
                 var set = paper.set();
 
@@ -262,22 +292,30 @@
 
                 var box = paper.rect(x, y, width, height).attr({
                     'stroke-dasharray': ['-'],
-                    'stroke': boxColor
+                    'stroke': boxColor,
+                    'fill': '#000',
+                    'fill-opacity': 0
                 });
+
+                if (isMoveable) {
+                    box.attr({
+                        'cursor': 'move'
+                    });
+                }
 
 
                 var handleOffset = handleSize / 2;
                 var centerX = width / 2;
                 var centerY = height / 2;
 
-                var nw = drawHandle(x - handleOffset, y - handleOffset, handleSize, handleSize, handleColor, 'nw');
-                var n = drawHandle(x + centerX - handleOffset, y - handleOffset, handleSize, handleSize, handleColor, 'n');
-                var ne = drawHandle(x + width - handleOffset, y - handleOffset, handleSize, handleSize, handleColor, 'ne');
-                var w = drawHandle(x - handleOffset, y + centerY - handleOffset, handleSize, handleSize, handleColor, 'w');
-                var e = drawHandle(x + width - handleOffset, y + centerY - handleOffset, handleSize, handleSize, handleColor, 'e');
-                var sw = drawHandle(x - handleOffset, y + height - handleOffset, handleSize, handleSize, handleColor, 'sw');
-                var s = drawHandle(x + centerX - handleOffset, y + height - handleOffset, handleSize, handleSize, handleColor, 's');
-                var se = drawHandle(x + width - handleOffset, y + height - handleOffset, handleSize, handleSize, handleColor, 'se');
+                var nw = drawHandle(x - handleOffset, y - handleOffset, handleSize, handleSize, handleColor, 'nw', isResizeable);
+                var n = drawHandle(x + centerX - handleOffset, y - handleOffset, handleSize, handleSize, handleColor, 'n', isResizeable);
+                var ne = drawHandle(x + width - handleOffset, y - handleOffset, handleSize, handleSize, handleColor, 'ne', isResizeable);
+                var w = drawHandle(x - handleOffset, y + centerY - handleOffset, handleSize, handleSize, handleColor, 'w', isResizeable);
+                var e = drawHandle(x + width - handleOffset, y + centerY - handleOffset, handleSize, handleSize, handleColor, 'e', isResizeable);
+                var sw = drawHandle(x - handleOffset, y + height - handleOffset, handleSize, handleSize, handleColor, 'sw', isResizeable);
+                var s = drawHandle(x + centerX - handleOffset, y + height - handleOffset, handleSize, handleSize, handleColor, 's', isResizeable);
+                var se = drawHandle(x + width - handleOffset, y + height - handleOffset, handleSize, handleSize, handleColor, 'se', isResizeable);
 
 
 
@@ -295,7 +333,6 @@
 
                 return set;
             };
-
 
             rotate = function(angle) {
                 $self.trigger('rotatestart');
@@ -342,12 +379,40 @@
                 }
             };
 
+            showCrop = function(value) {
+                if (value) {
+                    cropToolVisible = true;
+                    cropTool.show();
+                } else {
+                    cropToolVisible = false;
+                    cropTool.hide();
+                }
+            };
+
+            isCropVisible = function() {
+                return cropToolVisible;
+            };
+
+            moveCrop = function(dx, dy) {
+                cropTool.transform("t" + dx + "," + dy);
+                return false;
+            };
+
+            resizeCrop = function(width, height) {
+                return false;
+            };
 
             initTarget();
             initCropCoords();
             initCrop();
 
             realTarget.rotate = self.rotate = rotate;
+            realTarget.showCrop = self.showCrop = showCrop;
+            realTarget.isCropVisible = self.isCropVisible = isCropVisible;
+            realTarget.moveCrop = self.moveCrop = moveCrop;
+            realTarget.resizeCrop = self.resizeCrop = resizeCrop;
+
+
             $self.trigger('init');
         };
 
