@@ -167,7 +167,7 @@
             };
 
             initCrop = function() {
-                var cropButton = paper.rect(10, centerY, 50, 50, 10);
+                var cropButton = paper.rect(10, centerY - 25, 50, 50, 10);
                 cropButton.attr({
                     'fill': options.boxBgColor,
                     'fill-opacity': 0.5,
@@ -178,7 +178,7 @@
                 cropButtonSet.push(cropButton);
 
                 var cropIcon = drawCropTool(22.5,
-                    centerY + 12.5,
+                    centerY + 12.5 - 25,
                     25,
                     25,
                     4,
