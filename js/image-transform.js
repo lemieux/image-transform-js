@@ -71,35 +71,6 @@
                 keepRatio: true,
                 showCropOnLoad: false
             }, opts);
-        /*
-        var p = paper.setFinish(),
-            newTX = 0,
-            newTY = 0,
-            fDx = 0,
-            fDy = 0,
-            tAddX, tAddY, reInitialize = false,
-            start = function() {
-
-            },
-            move = function(dx, dy) {
-                tAddX = dx - fDx, tAddY = dy - fDy, fDx = dx, fDy = dy;
-                if (reInitialize) {
-                    tAddX = 0, fDx = 0, tAddY = 0;
-                    fDy = 0, reInitialize = false;
-                } else {
-                    newTX += tAddX, newTY += tAddY;
-                    p.attr({
-                        transform: "t" + newTX + "," + newTY
-                    });
-                }
-
-            },
-            up = function() {
-                reInitialize = true;
-            };
-        p.drag(move, start, up);
-
-*/
         initTransform = function() {
 
             if (typeof options.src === 'undefined' || options.src === false) {
@@ -199,13 +170,6 @@
                     options.cropHandleColor,
                     options.cropBoxColor, true, true, true);
 
-                cropTool.drag(function(dx, dy, x, y, event) {
-                    moveCrop(dx, dy);
-                }, function() {
-                    Backbone.trigger('cropstart');
-                }, function(){
-                    Backbone.trigger('cropstop');
-                });
 
 
                 cropButtonSet.mouseover(function() {
@@ -301,6 +265,32 @@
                     box.attr({
                         'cursor': 'move'
                     });
+
+                    var newTX = 0,
+                        newTY = 0,
+                        fDx = 0,
+                        fDy = 0,
+                        tAddX, tAddY, reInitialize = false,
+                        start = function() {
+                            $self.trigger('cropstart');
+                        },
+                        move = function(dx, dy) {
+                            tAddX = dx - fDx, tAddY = dy - fDy, fDx = dx, fDy = dy;
+                            if (reInitialize) {
+                                tAddX = 0, fDx = 0, tAddY = 0;
+                                fDy = 0, reInitialize = false;
+                            } else {
+                                newTX += tAddX, newTY += tAddY;
+                                moveCrop(newTX, newTY);
+                            }
+
+                        },
+                        up = function() {
+                            reInitialize = true;
+                            $self.trigger('cropstop');
+                        };
+
+                    box.drag(move, start, up);
                 }
 
 
